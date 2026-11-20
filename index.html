@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#10182b">
+<title>Genia Calendar</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1120;--panel:#141f35;--panel2:#1a2944;--line:#2b3b59;--blue:#4b8cff;--silver:#cbd5e1;--muted:#91a1bb}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#1b2c4b 0,#0b1120 55%);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#f4f7fb;min-height:100vh;padding:16px}
+.app{max-width:940px;margin:auto}.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:8px 0 22px}.brand{font-weight:850;letter-spacing:3px;font-size:26px;color:#e7efff}.brand span{color:var(--blue)}.sub{font-size:12px;color:var(--muted);letter-spacing:1.3px}
+.panel{background:linear-gradient(145deg,#17243c,#111a2d);border:1px solid var(--line);border-radius:20px;padding:18px;box-shadow:0 18px 50px #0005}
+.calbar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:18px;flex-wrap:wrap}.calname{font-size:20px;font-weight:750}.actions{display:flex;gap:8px;align-items:center}
+button{border:1px solid var(--line);background:var(--panel2);color:#f5f8ff;padding:10px 13px;border-radius:12px;font:inherit;cursor:pointer}button.primary{background:linear-gradient(135deg,#3979ed,#5b9cff);border:0;font-weight:700}button:active{transform:scale(.98)}
+.monthrow{display:flex;align-items:center;justify-content:space-between;margin:8px 0 14px}.month{font-size:22px;font-weight:750;text-transform:capitalize}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}.weekday{text-align:center;color:var(--muted);font-size:12px;padding:8px 0}.day{min-height:70px;border:1px solid #293954;background:#111c30;border-radius:12px;padding:8px;position:relative;text-align:left}.day.muted{opacity:.35}.day.today{border:2px solid var(--blue);background:#1a3155}.day.selected{box-shadow:inset 0 0 0 1px #8db8ff}.daynum{font-size:13px}.dot{display:block;width:6px;height:6px;background:#65a0ff;border-radius:50%;margin-top:7px}.below{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}.info{background:#101a2c;border:1px solid var(--line);border-radius:14px;padding:13px}.mutedtxt{color:var(--muted);font-size:13px}.event{padding:9px 0;border-bottom:1px solid #263650;font-size:14px}.empty{color:var(--muted);font-size:14px;padding:12px 0}
+dialog{background:#14213a;color:#f4f7fb;border:1px solid #405579;border-radius:18px;width:min(430px,calc(100% - 28px));padding:22px}dialog::backdrop{background:#030814bb}input{width:100%;padding:12px;border-radius:10px;border:1px solid #425574;background:#0c1628;color:white;font:inherit;margin:8px 0 14px}label{font-size:13px;color:var(--silver)}.modalactions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.manage-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:9px 0}
+@media(max-width:560px){body{padding:10px}.panel{padding:12px}.day{min-height:55px;padding:5px;border-radius:9px}.grid{gap:4px}.weekday{font-size:10px}.daynum{font-size:12px}.below{grid-template-columns:1fr}.calname{font-size:18px}.month{font-size:19px}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top"><div><div class="brand">GEN<span>IA</span></div><div class="sub">SMART CALENDAR</div></div><div class="sub">LA TUA ORGANIZZAZIONE</div></header>
+<section class="panel">
+<div class="calbar"><div><div class="mutedtxt">CALENDARIO ATTIVO</div><div class="calname" id="activeName">Personale</div></div><button id="switchBtn">＋ Gestisci calendari</button></div>
+<div class="monthrow"><button id="prev" aria-label="Mese precedente">‹</button><div class="month" id="monthLabel"></div><button id="next" aria-label="Mese successivo">›</button></div>
+<div class="grid" id="calendar"></div>
+<div class="below">
+<div class="info"><strong>Appuntamenti</strong><div class="mutedtxt" id="selectedDate"></div><div id="events"></div><button class="primary" id="addEvent" style="margin-top:12px">＋ Aggiungi appuntamento</button></div>
+<div class="info"><strong>I tuoi calendari</strong><div class="mutedtxt" style="margin:5px 0 10px">Scegli un calendario per visualizzarlo.</div><div id="calendarList"></div></div>
+</div></section>
+<p class="mutedtxt" style="text-align:center;margin:16px">Prima versione di prova · I dati sono salvati in questo browser su questo dispositivo.</p>
+</main>
+<dialog id="calendarDialog"><h3>Gestisci calendari</h3><div id="manageList"></div><p class="mutedtxt">Puoi aggiungere fino a 3 calendari personalizzati oltre ai tre iniziali.</p><button class="primary" id="newCalendar">＋ Nuovo calendario</button><div class="modalactions"><button class="close">Chiudi</button></div></dialog>
+<dialog id="nameDialog"><h3 id="nameTitle">Nuovo calendario</h3><label for="calendarInput">Nome del calendario</label><input id="calendarInput" maxlength="30" placeholder="Es. Francesco"><div class="modalactions"><button class="close">Annulla</button><button class="primary" id="saveCalendar">Salva</button></div></dialog>
+<dialog id="eventDialog"><h3>Nuovo appuntamento</h3><label for="eventTitle">Titolo</label><input id="eventTitle" maxlength="70" placeholder="Es. Visita, riunione..."><label for="eventTime">Ora (facoltativa)</label><input id="eventTime" type="time"><div class="modalactions"><button class="close">Annulla</button><button class="primary" id="saveEvent">Salva appuntamento</button></div></dialog>
+<script>
+const $=id=>document.getElementById(id), defaults=[{id:'personal',name:'Personale'},{id:'work',name:'Lavoro'},{id:'family',name:'Famiglia'}];
+let calendars=JSON.parse(localStorage.getItem('genia-calendars')||'null')||defaults, events=JSON.parse(localStorage.getItem('genia-events')||'{}');
+let active=calendars[0].id, view=new Date(), selected=new Date();selected.setHours(12,0,0,0);
+const save=()=>{localStorage.setItem('genia-calendars',JSON.stringify(calendars));localStorage.setItem('genia-events',JSON.stringify(events))}, keyDate=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'), current=()=>calendars.find(c=>c.id===active)||calendars[0];
+function render(){
+$('activeName').textContent=current().name;$('monthLabel').textContent=new Intl.DateTimeFormat('it-IT',{month:'long',year:'numeric'}).format(view);
+const root=$('calendar');root.innerHTML='';['Lun','Mar','Mer','Gio','Ven','Sab','Dom'].forEach(w=>{let e=document.createElement('div');e.className='weekday';e.textContent=w;root.append(e)});
+let first=new Date(view.getFullYear(),view.getMonth(),1),start=new Date(first);start.setDate(first.getDate()-(first.getDay()+6)%7);
+for(let i=0;i<42;i++){let d=new Date(start);d.setDate(start.getDate()+i);let k=keyDate(d),b=document.createElement('button');b.className='day'+(d.getMonth()!==view.getMonth()?' muted':'')+(k===keyDate(new Date())?' today':'')+(k===keyDate(selected)?' selected':'');let n=document.createElement('span');n.className='daynum';n.textContent=d.getDate();b.append(n);if((events[active]||{})[k]?.length){let dot=document.createElement('i');dot.className='dot';b.append(dot)}b.onclick=()=>{selected=d;render()};root.append(b)}
+$('selectedDate').textContent=new Intl.DateTimeFormat('it-IT',{dateStyle:'full'}).format(selected);
+let list=(events[active]||{})[keyDate(selected)]||[];$('events').innerHTML='';if(!list.length)$('events').innerHTML='<div class="empty">Nessun appuntamento per questo giorno.</div>';
+list.forEach(ev=>{let d=document.createElement('div');d.className='event';d.textContent=(ev.time?ev.time+' · ':'')+ev.title;$('events').append(d)});
+$('calendarList').innerHTML='';calendars.forEach(c=>{let b=document.createElement('button');b.textContent=(c.id===active?'✓ ':'')+c.name;b.style.margin='3px';b.onclick=()=>{active=c.id;render()};$('calendarList').append(b)});
+}
+$('prev').onclick=()=>{view.setMonth(view.getMonth()-1);render()};$('next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
+$('switchBtn').onclick=()=>{renderManage();$('calendarDialog').showModal()};
+function renderManage(){$('manageList').innerHTML='';calendars.forEach(c=>{let row=document.createElement('div');row.className='manage-row';let name=document.createElement('span');name.textContent=c.name;let group=document.createElement('div'),use=document.createElement('button');use.textContent='Apri';use.onclick=()=>{active=c.id;$('calendarDialog').close();render()};group.append(use);if(!['personal','work','family'].includes(c.id)){let r=document.createElement('button');r.textContent='Rinomina';r.onclick=()=>openName(c.id);group.append(r)}row.append(name,group);$('manageList').append(row)})}
+let editing=null;function openName(id=null){editing=id;$('nameTitle').textContent=id?'Rinomina calendario':'Nuovo calendario';$('calendarInput').value=id?calendars.find(c=>c.id===id).name:'';$('nameDialog').showModal()}
+$('newCalendar').onclick=()=>{if(calendars.filter(c=>!['personal','work','family'].includes(c.id)).length>=3){alert('Hai già raggiunto il limite di 3 calendari personalizzati.');return}openName()};
+$('saveCalendar').onclick=()=>{let name=$('calendarInput').value.trim();if(!name){alert('Inserisci un nome.');return}if(editing)calendars.find(c=>c.id===editing).name=name;else{let id='custom-'+Date.now();calendars.push({id,name});active=id}save();$('nameDialog').close();render();renderManage()};
+$('addEvent').onclick=()=>{$('eventTitle').value='';$('eventTime').value='';$('eventDialog').showModal()};
+$('saveEvent').onclick=()=>{let title=$('eventTitle').value.trim();if(!title){alert('Inserisci il titolo.');return}events[active]??={};events[active][keyDate(selected)]??=[];events[active][keyDate(selected)].push({title,time:$('eventTime').value});save();$('eventDialog').close();render()};
+document.querySelectorAll('.close').forEach(b=>b.onclick=()=>b.closest('dialog').close());render();
+</script>
+</body></html>
