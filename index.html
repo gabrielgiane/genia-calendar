@@ -62,6 +62,7 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
   <h2>I tuoi calendari</h2>
   <div class="cal-list" id="calendarList"></div>
   <button class="secondary addcal" id="addCalendar">＋ Aggiungi calendario</button>
+  <button class="secondary addcal" id="importGoogle">⇩ Importa eventi Google Calendar</button>
   <div style="height:18px"></div>
   <div class="genia">
     <div class="genia-head"><div class="spark">✦</div><strong>Genia</strong></div>
@@ -138,6 +139,18 @@ $('newEvent').onclick=openForm;$('prev').onclick=()=>{view.setMonth(view.getMont
 $('cancelForm').onclick=()=>{$('form').reset();$('eventTime').value='09:00'};
 $('form').onsubmit=e=>{e.preventDefault();const item={id:editingEventId||((crypto.randomUUID&&crypto.randomUUID())||String(Date.now())),title:$('eventName').value.trim(),date:$('eventDate').value,time:$('eventTime').value,calendarId:$('eventCalendar').value,notes:$('eventNotes').value.trim()};if(editingEventId){const i=events.findIndex(x=>x.id===editingEventId);if(i>=0)events[i]=item;}else events.push(item);editingEventId=null;selected=$('eventDate').value;view=new Date(selected+'T12:00:00');view.setDate(1);save();$('form').reset();$('eventTime').value='09:00';$('formTitle').textContent='Aggiungi un impegno';render()};
 $('addCalendar').onclick=()=>{let name=prompt('Nome del nuovo calendario:');if(!name||!name.trim())return;let id='cal-'+Date.now();calendars.push({id,name:name.trim(),color:colors[calendars.length%colors.length]});visible.add(id);save();render()};
+$('importGoogle').onclick=()=>{
+ const googleEvents=[
+  {id:'google-glo0knn5ljcgo5aj1ddkd2ovi4',title:'Turno lavoro',date:'2026-11-21',time:'18:00',calendarId:'work',notes:'Importato da Google Calendar'},
+  {id:'google-o11shjdus3n3m93h4u3569shko',title:'Scadenza abbonamento Green Theory',date:'2026-11-25',time:'09:00',calendarId:'personal',notes:'Importato da Google Calendar · Evento originale per l’intera giornata'},
+  {id:'google-9jb6diuirua4vupjpv9qkkvets',title:'Puk Beverino',date:'2026-11-28',time:'09:15',calendarId:'personal',notes:'Importato da Google Calendar'}
+ ];
+ const existing=new Set(events.map(e=>e.id));
+ const fresh=googleEvents.filter(e=>!existing.has(e.id));
+ if(!fresh.length){alert('Gli eventi Google risultano già importati.');return;}
+ events.push(...fresh);save();selected=fresh[0].date;view=new Date(selected+'T12:00:00');view.setDate(1);render();
+ alert('Importati '+fresh.length+' eventi da Google Calendar. Gli appuntamenti già presenti sono stati mantenuti.');
+};
 
 function geniaParse(){
  let raw=$('geniaCommand').value.trim();if(!raw)return;
