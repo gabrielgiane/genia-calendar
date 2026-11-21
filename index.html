@@ -169,19 +169,25 @@ function geniaParse(){
  const tm=raw.match(/\b(?:alle\s*)?([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/i);
  const time=tm?String(tm[1]).padStart(2,'0')+':'+(tm[2]||'00'):'09:00';
  let title=raw
-   .replace(/\b(dopodomani|domani|oggi|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|alle|il|per)\b/ig,'')
+   .replace(/\b(dopodomani|domani|oggi|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|alle|il|per|sul|nel|calendario)\b/ig,'')
    .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,'')
    .replace(/\b([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/,'').trim();
  if(!title)title='Nuovo impegno';
- const explicitCalendar=calendars.find(c=>low.includes(c.name.toLocaleLowerCase('it-IT')));
- const workWords=/\\b(riunione|lavoro|turno|ufficio|collega|colleghi|cliente|clienti|capo|azienda|servizio|consegna|fornitore|appuntamento di lavoro)\\b/i;
- const familyWords=/\\b(famiglia|familiare|moglie|marito|figlio|figlia|figli|genitori|mamma|papà|scuola|compleanno)\\b/i;
- const personalWords=/\\b(personale|medico|dentista|palestra|allenamento|spesa|banca)\\b/i;
+ const normalizeText=s=>String(s||'').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
+ const normalized=normalizeText(raw);
+ // Un calendario nominato dall'utente ha sempre la precedenza sulle categorie automatiche.
+ const explicitCalendar=calendars.find(c=>{
+   const name=normalizeText(c.name);
+   return name && (normalized.includes('calendario '+name) || (' '+normalized+' ').includes(' '+name+' '));
+ });
+ const workWords=/\b(riunione|lavoro|turno|ufficio|collega|colleghi|cliente|clienti|capo|azienda|servizio|consegna|fornitore)\b/i;
+ const familyWords=/\b(famiglia|familiare|moglie|marito|figlio|figlia|figli|genitori|mamma|papa|scuola|compleanno)\b/i;
+ const personalWords=/\b(personale|medico|dentista|palestra|allenamento|spesa|banca)\b/i;
  let cal=explicitCalendar;
  if(!cal){
-   if(workWords.test(low)) cal=calendars.find(c=>c.id==='work'||c.name.toLocaleLowerCase('it-IT')==='lavoro');
-   else if(familyWords.test(low)) cal=calendars.find(c=>c.id==='family'||c.name.toLocaleLowerCase('it-IT')==='famiglia');
-   else if(personalWords.test(low)) cal=calendars.find(c=>c.id==='personal'||c.name.toLocaleLowerCase('it-IT')==='personale');
+   if(workWords.test(normalized)) cal=calendars.find(c=>c.id==='work'||normalizeText(c.name)==='lavoro');
+   else if(familyWords.test(normalized)) cal=calendars.find(c=>c.id==='family'||normalizeText(c.name)==='famiglia');
+   else if(personalWords.test(normalized)) cal=calendars.find(c=>c.id==='personal'||normalizeText(c.name)==='personale');
  }
  if(!cal)cal=calendars.find(c=>c.id==='personal')||calendars[0];
  events.push({id:String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
