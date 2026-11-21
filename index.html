@@ -3,13 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="theme-color" content="#17243b">
+<meta name="theme-color" content="#101a2d">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./icon.svg">
 <title>Genia Calendar</title>
 <style>
 :root{--navy:#17243b;--blue:#5276c7;--pale:#edf2fb;--ink:#20283a;--muted:#748096;--line:#e7ebf2;--bg:#f6f8fc;--white:#fff;--green:#2f8b68}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
 header{background:var(--navy);color:#fff;padding:18px max(20px,calc((100% - 1160px)/2));display:flex;align-items:center;justify-content:space-between;gap:14px}
-.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:14px;background:linear-gradient(145deg,#8db4ff,#5276c7);display:grid;place-items:center;font-weight:800;font-size:22px;color:#fff}.brand strong{font-size:21px;letter-spacing:.2px}.brand small{display:block;color:#c5d1e6;font-size:11px;letter-spacing:1.4px}
+.brand{display:flex;align-items:center;gap:11px}.logo{width:42px;height:42px;border-radius:14px;overflow:hidden;display:grid;place-items:center}.logo img{width:100%;height:100%;object-fit:cover}.brand strong{font-size:21px;letter-spacing:.2px}.brand small{display:block;color:#c5d1e6;font-size:11px;letter-spacing:1.4px}
 .header-note{font-size:12px;color:#d0d9e8}
 main{max-width:1160px;margin:26px auto;padding:0 18px;display:grid;grid-template-columns:260px 1fr;gap:20px}
 .panel,.mainpanel{background:var(--white);border:1px solid var(--line);border-radius:18px;box-shadow:0 5px 22px #17243b08}
@@ -30,7 +33,7 @@ footer{text-align:center;color:#8a94a6;font-size:11px;padding:5px 15px 24px}
 :root{--navy:#101a2d;--blue:#4b8cff;--pale:#1a2944;--ink:#f4f7fb;--muted:#91a1bb;--line:#2b3b59;--bg:#0b1120;--white:#141f35;--green:#55b995}
 body{background:radial-gradient(circle at top,#1b2c4b 0,#0b1120 55%);color:var(--ink)}
 header{background:linear-gradient(110deg,#172b4b,#10182b);border-bottom:1px solid #30486c}
-.logo{background:linear-gradient(145deg,#3979ed,#8db4ff);box-shadow:0 0 18px #3979ed55}
+.logo{box-shadow:0 0 18px #3979ed55}
 .panel,.mainpanel{background:linear-gradient(145deg,#17243c,#111a2d);border-color:var(--line);box-shadow:0 18px 50px #0005}
 .cal{background:#101c30;color:#edf3ff}.cal input{accent-color:var(--blue)}
 button{background:linear-gradient(135deg,#3979ed,#5b9cff);color:#fff}
@@ -53,7 +56,7 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
 </style>
 </head>
 <body>
-<header><div class="brand"><div class="logo">G</div><div><strong>genia</strong><small>CALENDAR</small></div></div><div class="header-note">Tutti i tuoi impegni, in un unico posto</div></header>
+<header><div class="brand"><div class="logo"><img src="./icon.svg" alt="Genia Calendar"></div><div><strong>genia</strong><small>CALENDAR</small></div></div><div class="header-note">Tutti i tuoi impegni, in un unico posto</div></header>
 <main>
 <aside class="panel">
   <h2>I tuoi calendari</h2>
@@ -165,5 +168,6 @@ function geniaParse(){
 }
 $('geniaSend').onclick=geniaParse;$('geniaCommand').addEventListener('keydown',e=>{if(e.key==='Enter')geniaParse()});
 render();$('eventDate').value=selected;
+if ('serviceWorker' in navigator) { window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js').catch(err => console.warn('Offline non disponibile:', err))); }
 </script>
 </body></html>
