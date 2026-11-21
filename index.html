@@ -173,7 +173,17 @@ function geniaParse(){
    .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,'')
    .replace(/\b([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/,'').trim();
  if(!title)title='Nuovo impegno';
- const cal=calendars.find(c=>low.includes(c.name.toLocaleLowerCase('it-IT')))||calendars[0];
+ const explicitCalendar=calendars.find(c=>low.includes(c.name.toLocaleLowerCase('it-IT')));
+ const workWords=/\\b(riunione|lavoro|turno|ufficio|collega|colleghi|cliente|clienti|capo|azienda|servizio|consegna|fornitore|appuntamento di lavoro)\\b/i;
+ const familyWords=/\\b(famiglia|familiare|moglie|marito|figlio|figlia|figli|genitori|mamma|papà|scuola|compleanno)\\b/i;
+ const personalWords=/\\b(personale|medico|dentista|palestra|allenamento|spesa|banca)\\b/i;
+ let cal=explicitCalendar;
+ if(!cal){
+   if(workWords.test(low)) cal=calendars.find(c=>c.id==='work'||c.name.toLocaleLowerCase('it-IT')==='lavoro');
+   else if(familyWords.test(low)) cal=calendars.find(c=>c.id==='family'||c.name.toLocaleLowerCase('it-IT')==='famiglia');
+   else if(personalWords.test(low)) cal=calendars.find(c=>c.id==='personal'||c.name.toLocaleLowerCase('it-IT')==='personale');
+ }
+ if(!cal)cal=calendars.find(c=>c.id==='personal')||calendars[0];
  events.push({id:String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
  selected=iso(date);view=new Date(date.getFullYear(),date.getMonth(),1);save();$('geniaCommand').value='';
  $('geniaNotice').textContent='Aggiunto “'+title+'” per '+date.toLocaleDateString('it-IT')+' alle '+time+' nel calendario '+cal.name+'. Controlla i dettagli.';
