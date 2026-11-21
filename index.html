@@ -62,11 +62,12 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
   <h2>I tuoi calendari</h2>
   <div class="cal-list" id="calendarList"></div>
   <button class="secondary addcal" id="addCalendar">＋ Aggiungi calendario</button>
-  <button class="secondary addcal" id="importGoogle">⇩ Importa eventi Google Calendar</button>
+  <div class="notice" id="googleStatus">Google Calendar: collegamento non ancora disponibile. Nessun evento verrà importato automaticamente.</div>
   <div style="height:18px"></div>
   <div class="genia">
     <div class="genia-head"><div class="spark">✦</div><strong>Genia</strong></div>
     <p>Scrivi qui il tuo evento: Genia riconosce date, giorni e orari semplici.</p>
+    <label for="geniaCalendar">Calendario da usare per i nuovi eventi</label><select id="geniaCalendar"></select>
     <div class="command"><input id="geniaCommand" placeholder="Scrivi il tuo evento (es. Riunione domani alle 10:30)"><button id="geniaSend">＋</button></div>
     <div class="notice" id="geniaNotice">Assistente locale: interpreta frasi semplici. Non è ancora collegato a un servizio AI online.</div>
   </div>
@@ -104,6 +105,8 @@ const today=new Date(); let view=new Date(today.getFullYear(),today.getMonth(),1
 let calendars=JSON.parse(localStorage.getItem('genia_calendars')||'null')||[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
 let events=JSON.parse(localStorage.getItem('genia_events')||'[]');
 let visible=new Set(calendars.map(c=>c.id));
+let geniaCalendarId=localStorage.getItem('genia_default_calendar')||'personal';
+if(!calendars.some(c=>c.id===geniaCalendarId))geniaCalendarId=calendars[0]?.id||'personal';
 const $=id=>document.getElementById(id);
 function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function save(){localStorage.setItem('genia_calendars',JSON.stringify(calendars));localStorage.setItem('genia_events',JSON.stringify(events))}
@@ -111,6 +114,10 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 function renderCalendars(){
  $('calendarList').innerHTML=calendars.map(c=>`<label class="cal"><input type="checkbox" data-cal="${c.id}" ${visible.has(c.id)?'checked':''}><span class="dot" style="background:${c.color}"></span><span>${esc(c.name)}</span></label>`).join('');
  $('eventCalendar').innerHTML=calendars.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+ $('geniaCalendar').innerHTML=calendars.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+ $('geniaCalendar').value=geniaCalendarId;
+ $('eventCalendar').value=geniaCalendarId;
+ $('geniaCalendar').onchange=()=>{geniaCalendarId=$('geniaCalendar').value;localStorage.setItem('genia_default_calendar',geniaCalendarId);$('geniaNotice').textContent='Genia inserirà i nuovi eventi in '+(calendars.find(c=>c.id===geniaCalendarId)?.name||'calendario selezionato')+'.';};
  document.querySelectorAll('[data-cal]').forEach(el=>el.addEventListener('change',()=>{el.checked?visible.add(el.dataset.cal):visible.delete(el.dataset.cal);render()}));
 }
 function render(){
@@ -133,24 +140,14 @@ function renderEventList(){
  document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Eliminare questo appuntamento?')){events=events.filter(e=>e.id!==b.dataset.delete);save();render()}}));
 }
 let editingEventId=null;
-function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventNotes').value='';$('eventName').focus();}
+function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventCalendar').value=geniaCalendarId;$('eventNotes').value='';$('eventName').focus();}
 function editEvent(id){const ev=events.find(x=>x.id===id);if(!ev)return;editingEventId=id;$('formTitle').textContent='Modifica impegno';$('eventName').value=ev.title;$('eventDate').value=ev.date;$('eventTime').value=ev.time||'';$('eventCalendar').value=ev.calendarId;$('eventNotes').value=ev.notes||'';document.getElementById('eventForm').scrollIntoView({behavior:'smooth',block:'center'});}
 $('newEvent').onclick=openForm;$('prev').onclick=()=>{view.setMonth(view.getMonth()-1);render()};$('next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
 $('cancelForm').onclick=()=>{$('form').reset();$('eventTime').value='09:00'};
 $('form').onsubmit=e=>{e.preventDefault();const item={id:editingEventId||((crypto.randomUUID&&crypto.randomUUID())||String(Date.now())),title:$('eventName').value.trim(),date:$('eventDate').value,time:$('eventTime').value,calendarId:$('eventCalendar').value,notes:$('eventNotes').value.trim()};if(editingEventId){const i=events.findIndex(x=>x.id===editingEventId);if(i>=0)events[i]=item;}else events.push(item);editingEventId=null;selected=$('eventDate').value;view=new Date(selected+'T12:00:00');view.setDate(1);save();$('form').reset();$('eventTime').value='09:00';$('formTitle').textContent='Aggiungi un impegno';render()};
 $('addCalendar').onclick=()=>{let name=prompt('Nome del nuovo calendario:');if(!name||!name.trim())return;let id='cal-'+Date.now();calendars.push({id,name:name.trim(),color:colors[calendars.length%colors.length]});visible.add(id);save();render()};
-$('importGoogle').onclick=()=>{
- const googleEvents=[
-  {id:'google-glo0knn5ljcgo5aj1ddkd2ovi4',title:'Turno lavoro',date:'2026-11-21',time:'18:00',calendarId:'work',notes:'Importato da Google Calendar'},
-  {id:'google-o11shjdus3n3m93h4u3569shko',title:'Scadenza abbonamento Green Theory',date:'2026-11-25',time:'',calendarId:'personal',notes:'Importato da Google Calendar · Evento originale per l’intera giornata'},
-  {id:'google-9jb6diuirua4vupjpv9qkkvets',title:'Puk Beverino',date:'2026-11-28',time:'09:15',calendarId:'personal',notes:'Importato da Google Calendar'}
- ];
- const existing=new Set(events.map(e=>e.id));
- const fresh=googleEvents.filter(e=>!existing.has(e.id));
- if(!fresh.length){alert('Gli eventi Google risultano già importati.');return;}
- events.push(...fresh);save();selected=fresh[0].date;view=new Date(selected+'T12:00:00');view.setDate(1);render();
- alert('Importati '+fresh.length+' eventi da Google Calendar. Gli appuntamenti già presenti sono stati mantenuti.');
-};
+// L'importazione Google reale sarà aggiunta solo con OAuth e accesso autorizzato.
+
 
 function geniaParse(){
  let raw=$('geniaCommand').value.trim();if(!raw)return;
@@ -189,7 +186,8 @@ function geniaParse(){
    else if(familyWords.test(normalized)) cal=calendars.find(c=>c.id==='family'||normalizeText(c.name)==='famiglia');
    else if(personalWords.test(normalized)) cal=calendars.find(c=>c.id==='personal'||normalizeText(c.name)==='personale');
  }
- if(!cal)cal=calendars.find(c=>c.id==='personal')||calendars[0];
+ // La scelta esplicita nel selettore di Genia ha priorità sulle classificazioni automatiche.
+ cal=calendars.find(c=>c.id===geniaCalendarId)||calendars[0];
  events.push({id:String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
  selected=iso(date);view=new Date(date.getFullYear(),date.getMonth(),1);save();$('geniaCommand').value='';
  $('geniaNotice').textContent='Aggiunto “'+title+'” per '+date.toLocaleDateString('it-IT')+' alle '+time+' nel calendario '+cal.name+'. Controlla i dettagli.';
