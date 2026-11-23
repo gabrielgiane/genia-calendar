@@ -121,6 +121,12 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
 <footer>GENIA CALENDAR · Versione 1.2</footer>
 <script>
 
+const colors=['#5276c7','#2f8b68','#a16bc1','#d28a43','#d36d82','#4d9ca5'];
+const today=new Date(); let view=new Date(today.getFullYear(),today.getMonth(),1); let selected=iso(today);
+let calendars=JSON.parse(localStorage.getItem('genia_calendars')||'null')||[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
+let events=JSON.parse(localStorage.getItem('genia_events')||'[]');
+let visible=new Set(calendars.map(c=>c.id));
+const $=id=>document.getElementById(id);
 const SUPABASE_URL='https://imhuiwzyrucesxtdfpdj.supabase.co';
 const SUPABASE_KEY='sb_publishable_KWs1lgQsVTlfqXEEYu9xuA_evK10WO7';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -171,12 +177,7 @@ supabaseClient.auth.onAuthStateChange((_event,session)=>{
  if(session)showApp(session.user);
 });
 
-const colors=['#5276c7','#2f8b68','#a16bc1','#d28a43','#d36d82','#4d9ca5'];
-const today=new Date(); let view=new Date(today.getFullYear(),today.getMonth(),1); let selected=iso(today);
-let calendars=JSON.parse(localStorage.getItem('genia_calendars')||'null')||[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
-let events=JSON.parse(localStorage.getItem('genia_events')||'[]');
-let visible=new Set(calendars.map(c=>c.id));
-const $=id=>document.getElementById(id);
+
 function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function save(){localStorage.setItem('genia_calendars',JSON.stringify(calendars));localStorage.setItem('genia_events',JSON.stringify(events))}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
