@@ -164,9 +164,14 @@ function geniaParse(){
  }
  const dateMatch=raw.match(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/);
  const withoutDate=dateMatch?raw.replace(dateMatch[0],' '):raw;
+ const numberWords={'zero':0,'una':1,'uno':1,'un':1,'due':2,'tre':3,'quattro':4,'cinque':5,'sei':6,'sette':7,'otto':8,'nove':9,'dieci':10,'undici':11,'dodici':12,'tredici':13,'quattordici':14,'quindici':15,'sedici':16,'diciassette':17,'diciotto':18,'diciannove':19,'venti':20,'ventuno':21,'ventidue':22,'ventitre':23,'ventiquattro':24};
  const tm=withoutDate.match(/\balle\s*([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/i)||withoutDate.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
- const time=tm?String(tm[1]).padStart(2,'0')+':'+(tm[2]||'00'):'09:00';
+ const wordTime=withoutDate.match(/\balle\s+(zero|una|uno|un|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici|dodici|tredici|quattordici|quindici|sedici|diciassette|diciotto|diciannove|venti|ventuno|ventidue|ventitre|ventiquattro)\b/i);
+ const time=tm?String(tm[1]).padStart(2,'0')+':'+(tm[2]||'00'):wordTime?String(numberWords[normalizeText(wordTime[1])]).padStart(2,'0')+':00':'09:00';
+ const timeWasFound=!!(tm||wordTime);
  let title=raw
+   .replace(explicitCalendar?new RegExp('\\\\b(?:a|ad|al|alla|nel|sul)\\\\s+(?:calendario\\\\s+(?:di\\\\s+)?)?'+explicitCalendar.name.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\ let title=raw
+')+'\\\\b','ig'):/$^/,' ')
    .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,' ')
    .replace(/\b(?:alle\s*)?([01]?\d|2[0-3])[:.]([0-5]\d)\b/ig,' ')
    .replace(/\balle\s*([01]?\d|2[0-3])\b/ig,' ')
@@ -189,7 +194,7 @@ function geniaParse(){
  if(!cal)cal=calendars.find(c=>c.id==='personal')||calendars[0];
  if(!cal){$('geniaNotice').textContent='Prima crea almeno un calendario.';return;}
  const dateText=date.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
- const timeNote=tm?'':' (orario non indicato: proposta 09:00)';
+ const timeNote=timeWasFound?'':' (orario non indicato: proposta 09:00)';
  const summary='Genia ha capito questo appuntamento:\n\nTitolo: '+title+'\nData: '+dateText+'\nOra: '+time+(timeNote?'\n'+timeNote:'')+'\nCalendario: '+cal.name+'\n\nVuoi salvarlo?';
  if(!window.confirm(summary)){ $('geniaNotice').textContent='Nessun evento salvato. Puoi correggere la frase e riprovare.';return; }
  events.push({id:(crypto.randomUUID&&crypto.randomUUID())||String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
