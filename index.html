@@ -63,7 +63,6 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
     <div class="genia-head"><div class="spark">✦</div><strong>Genia</strong></div>
     <p>Scrivi qui il tuo evento: Genia riconosce date, giorni e orari semplici.</p>
     <div class="command"><input id="geniaCommand" placeholder="Scrivi il tuo evento (es. Riunione domani alle 10:30)"><button id="geniaSend">＋</button></div>
-    <label for="geniaCalendar">Calendario da usare per i nuovi eventi</label><select id="geniaCalendar"></select>
     <div class="notice" id="geniaNotice">Assistente locale: interpreta frasi semplici. Non è ancora collegato a un servizio AI online.</div>
   </div>
   <div style="height:18px"></div>
@@ -105,8 +104,7 @@ const today=new Date(); let view=new Date(today.getFullYear(),today.getMonth(),1
 let calendars=JSON.parse(localStorage.getItem('genia_calendars')||'null')||[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
 let events=JSON.parse(localStorage.getItem('genia_events')||'[]');
 let visible=new Set(calendars.map(c=>c.id));
-let geniaCalendarId=localStorage.getItem('genia_default_calendar')||'personal';
-if(!calendars.some(c=>c.id===geniaCalendarId))geniaCalendarId=calendars[0]?.id||'personal';
+const defaultCalendarId=calendars.some(c=>c.id==='personal')?'personal':(calendars[0]?.id||'');
 const $=id=>document.getElementById(id);
 function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function save(){localStorage.setItem('genia_calendars',JSON.stringify(calendars));localStorage.setItem('genia_events',JSON.stringify(events))}
@@ -114,10 +112,7 @@ function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;',
 function renderCalendars(){
  $('calendarList').innerHTML=calendars.map(c=>`<label class="cal"><input type="checkbox" data-cal="${c.id}" ${visible.has(c.id)?'checked':''}><span class="dot" style="background:${c.color}"></span><span>${esc(c.name)}</span></label>`).join('');
  $('eventCalendar').innerHTML=calendars.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
- $('geniaCalendar').innerHTML=calendars.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
- $('geniaCalendar').value=geniaCalendarId;
- $('eventCalendar').value=geniaCalendarId;
- $('geniaCalendar').onchange=()=>{geniaCalendarId=$('geniaCalendar').value;localStorage.setItem('genia_default_calendar',geniaCalendarId);$('geniaNotice').textContent='Genia inserirà i nuovi eventi in '+(calendars.find(c=>c.id===geniaCalendarId)?.name||'calendario selezionato')+'.';};
+ $('eventCalendar').value=defaultCalendarId;
  document.querySelectorAll('[data-cal]').forEach(el=>el.addEventListener('change',()=>{el.checked?visible.add(el.dataset.cal):visible.delete(el.dataset.cal);render()}));
 }
 function render(){
@@ -140,7 +135,7 @@ function renderEventList(){
  document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Eliminare questo appuntamento?')){events=events.filter(e=>e.id!==b.dataset.delete);save();render()}}));
 }
 let editingEventId=null;
-function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventCalendar').value=geniaCalendarId;$('eventNotes').value='';$('eventName').focus();}
+function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventCalendar').value=defaultCalendarId;$('eventNotes').value='';$('eventName').focus();}
 function editEvent(id){const ev=events.find(x=>x.id===id);if(!ev)return;editingEventId=id;$('formTitle').textContent='Modifica impegno';$('eventName').value=ev.title;$('eventDate').value=ev.date;$('eventTime').value=ev.time||'';$('eventCalendar').value=ev.calendarId;$('eventNotes').value=ev.notes||'';document.getElementById('eventForm').scrollIntoView({behavior:'smooth',block:'center'});}
 $('newEvent').onclick=openForm;$('prev').onclick=()=>{view.setMonth(view.getMonth()-1);render()};$('next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
 $('cancelForm').onclick=()=>{$('form').reset();$('eventTime').value='09:00'};
@@ -191,7 +186,7 @@ function geniaParse(){
  if(!cal&&workWords.test(normalized))cal=calendars.find(c=>c.id==='work'||normalizeText(c.name)==='lavoro');
  if(!cal&&!explicitCalendar&&familyWords.test(normalized))cal=calendars.find(c=>c.id==='family'||normalizeText(c.name)==='famiglia');
  if(!cal&&!explicitCalendar&&personalWords.test(normalized))cal=calendars.find(c=>c.id==='personal'||normalizeText(c.name)==='personale');
- if(!cal)cal=calendars.find(c=>c.id===geniaCalendarId)||calendars[0];
+ if(!cal)cal=calendars.find(c=>c.id==='personal')||calendars[0];
  if(!cal){$('geniaNotice').textContent='Prima crea almeno un calendario.';return;}
  const dateText=date.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
  const timeNote=tm?'':' (orario non indicato: proposta 09:00)';
