@@ -187,7 +187,8 @@ function geniaParse(){
  title=title.replace(/\b(?:alle\s*)?\d{1,2}(?:[:.]\d{2})?\b/ig,' ');
  if(wordTime) title=title.replace(new RegExp('alle\\s+'+wordTime[1]+'\\b','i'),' ');
  if(explicitCalendar){
-   title=title.replace(new RegExp(explicitCalendar.name,'ig'),' ');
+   title=title.replace(new RegExp('\\b(?:a|ad|al|alla|nel\\s+calendario|calendario|di)\\s+'+explicitCalendar.name+'\\b','ig'),' ');
+   title=title.replace(new RegExp('\\b'+explicitCalendar.name+'\\b','ig'),' ');
  }
  title=title.replace(/\b(dopodomani|domani|oggi|lunedi|lunedì|martedi|martedì|mercoledi|mercoledì|giovedi|giovedì|venerdi|venerdì|sabato|domenica|alle|il|per|nel|calendario)\b/ig,' ').replace(/\s+/g,' ').trim();
  title=title.replace(/^(?:ho\s+|devo\s+|inserisci\s+|aggiungi\s+|segnami\s+)+/i,'').trim();
