@@ -132,7 +132,7 @@ const SUPABASE_KEY='sb_publishable_KWs1lgQsVTlfqXEEYu9xuA_evK10WO7';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser=null;
 function authMessage(message){$('authError').textContent=message||''}
-let cloudSyncBusy=false, cloudUserId=null;
+let cloudSyncBusy=false, cloudSyncPending=false, cloudUserId=null;
 function localDateTime(date,time){
  const parts=String(date||'').split('-').map(Number);
  const hm=String(time||'00:00').split(':').map(Number);
@@ -144,7 +144,8 @@ function cloudLocalDate(isoValue){
  return {date:v.year+'-'+v.month+'-'+v.day,time:v.hour+':'+v.minute};
 }
 async function syncLocalToCloud(){
- if(!currentUser || cloudSyncBusy) return;
+ if(!currentUser) return;
+ if(cloudSyncBusy){cloudSyncPending=true;return;}
  cloudSyncBusy=true;
  try{
   const {data:remoteCals,error:calErr}=await supabaseClient.from('calendars').select('*');
@@ -193,12 +194,16 @@ async function syncLocalToCloud(){
  }catch(err){
   $('accountStatus').textContent=currentUser.email+' · errore sincronizzazione';
   console.error('Genia cloud sync:',err);
- }finally{cloudSyncBusy=false}
+ }finally{
+  cloudSyncBusy=false;
+  if(cloudSyncPending && currentUser){cloudSyncPending=false;Promise.resolve().then(()=>syncLocalToCloud());}
+ }
 }
 async function bootstrapCloud(user){
  if(!user || cloudUserId===user.id)return;
+ const {error}=await supabaseClient.from('profiles').upsert({id:user.id,display_name:user.email},{onConflict:'id'});
+ if(error){$('accountStatus').textContent=user.email+' · errore profilo';console.error('Genia profile:',error);return;}
  cloudUserId=user.id;
- await supabaseClient.from('profiles').upsert({id:user.id,display_name:user.email},{onConflict:'id'});
  await syncLocalToCloud();
 }
 function showApp(user){
@@ -236,7 +241,7 @@ $('signupBtn').addEventListener('click',()=>handleAuth('signup'));
 $('offlineBtn').addEventListener('click',()=>showApp(null));
 $('logoutBtn').addEventListener('click',async()=>{
  await supabaseClient.auth.signOut();
- currentUser=null;$('appMain').hidden=true;$('authScreen').hidden=false;
+ currentUser=null;cloudUserId=null;cloudSyncPending=false;$('appMain').hidden=true;$('authScreen').hidden=false;
  $('accountStatus').textContent='Accesso non effettuato';$('logoutBtn').hidden=true;
 });
 supabaseClient.auth.getSession().then(({data})=>{
