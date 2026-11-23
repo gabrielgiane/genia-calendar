@@ -29,7 +29,7 @@ input,select,textarea{font:inherit;width:100%;padding:10px 11px;border:1px solid
 .auth-screen{position:fixed;inset:0;z-index:20;background:#08101eeF;display:grid;place-items:center;padding:18px}
 .auth-card{width:min(420px,100%);background:#17243c;border:1px solid #354b6d;border-radius:20px;padding:24px;box-shadow:0 24px 80px #0009}
 .auth-card h2{font-size:22px;margin:0 0 5px}.auth-card p{font-size:13px;color:#aab8cf;margin:0 0 15px}
-.auth-card label{margin-top:12px}.auth-actions{display:grid;gap:9px;margin-top:16px}.auth-error{color:#ff9b9b;font-size:12px;min-height:18px;margin-top:10px}
+.auth-card label{margin-top:12px}.password-wrap{display:flex;align-items:stretch;gap:8px}.password-wrap input{flex:1;min-width:0}.password-toggle{flex:none;min-width:48px;padding:9px 13px;background:#243a5c;border:1px solid #49658e;color:#fff;font-size:19px;line-height:1}.password-toggle:focus-visible{outline:2px solid #8db4ff;outline-offset:2px}.auth-actions{display:grid;gap:9px;margin-top:16px}.auth-error{color:#ff9b9b;font-size:12px;min-height:18px;margin-top:10px}
 .auth-screen[hidden]{display:none}
 footer{text-align:center;color:#8a94a6;font-size:11px;padding:5px 15px 24px}
 @media(max-width:760px){main{grid-template-columns:1fr;margin:14px auto;gap:13px}.panel{order:2}.mainpanel{padding:14px}.day{min-height:64px;padding:5px;border-radius:9px}.day.today{padding:4px}.event-pill{font-size:9px}.below{grid-template-columns:1fr}.header-note{display:none}.weekdays,.days{gap:4px}.monthnav h2{min-width:130px;font-size:16px}}
@@ -69,7 +69,11 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
     <h2 id="authTitle">Accedi a Genia</h2>
     <p>Usa la stessa email e password su telefono e computer per ritrovare i tuoi calendari.</p>
     <label for="authEmail">Email</label><input id="authEmail" type="email" autocomplete="email" placeholder="nome@email.com">
-    <label for="authPassword">Password</label><input id="authPassword" type="password" autocomplete="current-password" placeholder="Almeno 6 caratteri">
+    <label for="authPassword">Password</label>
+    <div class="password-wrap">
+      <input id="authPassword" type="password" autocomplete="current-password" placeholder="Almeno 6 caratteri">
+      <button class="password-toggle" id="togglePassword" type="button" aria-label="Mostra password" aria-pressed="false">◉</button>
+    </div>
     <div class="auth-actions">
       <button id="loginBtn">Accedi</button>
       <button class="secondary" id="signupBtn">Crea un account</button>
@@ -236,7 +240,15 @@ async function handleAuth(mode){
  }catch(err){authMessage(err.message||'Non è stato possibile completare l’accesso.')}
  finally{$('loginBtn').disabled=$('signupBtn').disabled=false}
 }
-$('loginBtn').addEventListener('click',()=>handleAuth('login'));
+$('togglePassword').addEventListener('click',()=>{
+   const field=$('authPassword'),show=field.type==='password';
+   field.type=show?'text':'password';
+   $('togglePassword').textContent=show?'◉̸':'◉';
+   $('togglePassword').setAttribute('aria-label',show?'Nascondi password':'Mostra password');
+   $('togglePassword').setAttribute('aria-pressed',String(show));
+   field.focus();
+ });
+ $('loginBtn').addEventListener('click',()=>handleAuth('login'));
 $('signupBtn').addEventListener('click',()=>handleAuth('signup'));
 $('offlineBtn').addEventListener('click',()=>showApp(null));
 $('logoutBtn').addEventListener('click',async()=>{
