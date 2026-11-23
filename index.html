@@ -170,7 +170,7 @@ function geniaParse(){
  const time=tm?String(tm[1]).padStart(2,'0')+':'+(tm[2]||'00'):wordTime?String(numberWords[normalizeText(wordTime[1])]).padStart(2,'0')+':00':'09:00';
  const timeWasFound=!!(tm||wordTime);
  let title=raw
-   .replace(explicitCalendar?new RegExp('\\\\b(?:a|ad|al|alla|nel|sul)\\\\s+(?:calendario\\\\s+(?:di\\\\s+)?)?'+explicitCalendar.name.replace(/[.*+?^${}()|[\\]\\\\]/g,'\\\\ let title=raw
+   .replace(explicitCalendar?new RegExp('\\b(?:a|ad|al|alla|nel|sul|calendario|di)\\s+'+explicitCalendar.name+'\\b','ig') : /$^/,' ')
 ')+'\\\\b','ig'):/$^/,' ')
    .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,' ')
    .replace(/\b(?:alle\s*)?([01]?\d|2[0-3])[:.]([0-5]\d)\b/ig,' ')
