@@ -103,6 +103,76 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
 .eventrow button{background:transparent}
 @media(max-width:760px){.panel{order:0}}
 
+
+/* Layout responsive rifinito: desktop, tablet e smartphone */
+html{min-width:320px;overflow-x:hidden}
+body{min-width:320px;overflow-x:hidden}
+button,input,select,textarea{touch-action:manipulation}
+button{min-height:42px}
+.auth-screen{z-index:1000;position:fixed;inset:0;min-height:100vh;min-height:100dvh;width:100%;display:flex;justify-content:center;align-items:center;overflow-y:auto;overscroll-behavior:contain;padding: max(16px,env(safe-area-inset-top)) 16px max(16px,env(safe-area-inset-bottom))}
+.auth-card{width:min(420px,100%);max-height:calc(100dvh - 32px);overflow-y:auto;margin:auto;padding:24px}
+.auth-card .password-wrap{display:flex;gap:8px;width:100%}
+.auth-card .password-wrap input{flex:1;min-width:0;width:0}
+.auth-card .password-toggle{flex:0 0 92px;min-width:92px;font-size:14px;font-weight:700}
+.auth-actions button{width:100%;min-height:46px}
+main#appMain{min-width:0}
+.mainpanel,.panel,.subpanel{min-width:0}
+.days,.weekdays{grid-template-columns:repeat(7,minmax(0,1fr))}
+.day{min-width:0;overflow:hidden}
+.event-pill{display:block;width:100%}
+@media(max-width:760px){
+  header{padding:12px 15px;min-height:64px;gap:8px}
+  .brand{gap:8px}.logo{width:38px;height:38px;border-radius:12px;font-size:20px}
+  .brand strong{font-size:19px}.brand small{font-size:9px}
+  .authbar{gap:5px;min-width:0}.authbar span{max-width:42vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+  main#appMain{display:flex;flex-direction:column;width:100%;margin:12px auto;padding:0 12px;gap:12px}
+  .mainpanel{order:1;width:100%;padding:13px;border-radius:15px}
+  .panel{order:2;width:100%;padding:15px;border-radius:15px}
+  .genia{padding:12px;margin-bottom:15px}
+  .genia .command{display:flex;align-items:stretch;gap:7px}
+  .genia .command input{min-width:0;flex:1}
+  .genia .command button{flex:0 0 46px;padding:8px}
+  .toprow{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .monthnav{gap:5px;min-width:0;flex:1}
+  .monthnav button{min-width:38px;padding:7px 9px}
+  .monthnav h2{min-width:0;flex:1;font-size:16px;white-space:nowrap}
+  #newEvent{font-size:12px;padding:9px 10px;min-height:40px;white-space:nowrap}
+  .weekdays{margin-top:16px;margin-bottom:6px;gap:3px}
+  .weekdays div{font-size:10px;padding:4px 0}
+  .days{gap:3px}
+  .day{min-height:58px;padding:4px 3px;border-radius:8px;gap:3px}
+  .day.today{padding:3px 2px}
+  .num{font-size:12px}
+  .event-pill{font-size:8px;padding:2px 3px;border-radius:4px}
+  .below{grid-template-columns:minmax(0,1fr);gap:11px;margin-top:14px}
+  .subpanel{padding:13px;border-radius:12px}
+  .formgrid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 8px}
+  .form-actions{display:grid;grid-template-columns:1fr 1fr}
+  .form-actions button{min-width:0;padding:10px 8px;font-size:13px}
+  .panel h2{margin-bottom:10px}
+  .cal-list{grid-template-columns:1fr;gap:7px}
+  .cal{min-height:42px}
+  .addcal{min-height:44px}
+  footer{padding-bottom:18px}
+}
+@media(max-width:380px){
+  header{padding-left:11px;padding-right:11px}
+  main#appMain{padding-left:9px;padding-right:9px}
+  .mainpanel{padding:10px}
+  .monthnav h2{font-size:14px}
+  #newEvent{font-size:11px;padding:8px}
+  .day{min-height:52px}
+  .event-pill{font-size:7px}
+  .auth-card{padding:20px 16px}
+}
+@media(max-height:650px){
+  .auth-screen{align-items:flex-start;padding-top:max(12px,env(safe-area-inset-top));padding-bottom:12px}
+  .auth-card{margin:auto;max-height:none}
+}
+@media(orientation:landscape) and (max-height:500px){
+  .auth-screen{align-items:flex-start}
+  .auth-card{margin:8px auto}
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -135,15 +205,16 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
   <div class="cal-list" id="calendarList"></div>
   <button class="secondary addcal" id="addCalendar">＋ Aggiungi calendario</button>
   <div style="height:18px"></div>
-  <div class="genia">
+
+  <div class="notice">Versione 1.2 · Accesso account disponibile; sincronizzazione calendari in fase di completamento.</div>
+</aside>
+<section class="mainpanel">
+    <div class="genia">
     <div class="genia-head"><div class="spark">✦</div><strong>Genia</strong></div>
     <p>Scrivi un impegno come lo diresti a voce. Genia riconosce date, giorni e orari semplici.</p>
     <div class="command"><input id="geniaCommand" placeholder="Es. Riunione domani alle 10:30"><button id="geniaSend">＋</button></div>
     <div class="notice" id="geniaNotice">Assistente locale: interpreta frasi semplici. Non è ancora collegato a un servizio AI online.</div>
   </div>
-  <div class="notice">Versione 1.2 · Accesso account disponibile; sincronizzazione calendari in fase di completamento.</div>
-</aside>
-<section class="mainpanel">
   <div class="toprow">
     <div class="monthnav"><button class="secondary" id="prev">‹</button><h2 id="monthTitle"></h2><button class="secondary" id="next">›</button></div>
     <button id="newEvent">＋ Nuovo impegno</button>
