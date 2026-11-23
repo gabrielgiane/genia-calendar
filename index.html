@@ -150,47 +150,56 @@ $('addCalendar').onclick=()=>{let name=prompt('Nome del nuovo calendario:');if(!
 
 
 function geniaParse(){
- let raw=$('geniaCommand').value.trim();if(!raw)return;
+ const raw=$('geniaCommand').value.trim();if(!raw)return;
  const low=raw.toLocaleLowerCase('it-IT');
+ const normalizeText=s=>String(s||'').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
  const date=new Date(today.getFullYear(),today.getMonth(),today.getDate(),12);
- if(low.includes('dopodomani'))date.setDate(date.getDate()+2);
- else if(low.includes('domani'))date.setDate(date.getDate()+1);
- else if(!low.includes('oggi')){
+ if(/\bdopodomani\b/.test(low))date.setDate(date.getDate()+2);
+ else if(/\bdomani\b/.test(low))date.setDate(date.getDate()+1);
+ else if(!/\ oggi\b/.test(' '+low)){
    const dm=low.match(/\b(\d{1,2})[\/.-](\d{1,2})(?:[\/.-](\d{4}))?\b/);
-   if(dm){const yy=Number(dm[3]||today.getFullYear());date.setFullYear(yy,Number(dm[2])-1,Number(dm[1]));}
-   else {
+   if(dm){
+     const day=Number(dm[1]),month=Number(dm[2])-1,year=Number(dm[3]||today.getFullYear());
+     date.setFullYear(year,month,day);
+     if(date.getDate()!==day||date.getMonth()!==month||date.getFullYear()!==year){$('geniaNotice').textContent='La data indicata non è valida. Controlla giorno, mese e anno.';return;}
+   }else{
      const weekdays={'domenica':0,'lunedi':1,'lunedì':1,'martedi':2,'martedì':2,'mercoledi':3,'mercoledì':3,'giovedi':4,'giovedì':4,'venerdi':5,'venerdì':5,'sabato':6};
-     for(const [name,day] of Object.entries(weekdays)){if(low.includes(name)){let delta=(day-date.getDay()+7)%7;if(delta===0)delta=7;date.setDate(date.getDate()+delta);break;}}
+     for(const [name,day] of Object.entries(weekdays)){if(new RegExp('\\b'+name+'\\b','i').test(low)){let delta=(day-date.getDay()+7)%7;if(delta===0)delta=7;date.setDate(date.getDate()+delta);break;}}
    }
  }
- const tm=raw.match(/\b(?:alle\s*)?([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/i);
+ const dateMatch=raw.match(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/);
+ const withoutDate=dateMatch?raw.replace(dateMatch[0],' '):raw;
+ const tm=withoutDate.match(/\balle\s*([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/i)||withoutDate.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
  const time=tm?String(tm[1]).padStart(2,'0')+':'+(tm[2]||'00'):'09:00';
  let title=raw
-   .replace(/\b(dopodomani|domani|oggi|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|alle|il|per|sul|nel|calendario)\b/ig,'')
-   .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,'')
-   .replace(/\b([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/,'').trim();
+   .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,' ')
+   .replace(/\b(?:alle\s*)?([01]?\d|2[0-3])[:.]([0-5]\d)\b/ig,' ')
+   .replace(/\balle\s*([01]?\d|2[0-3])\b/ig,' ')
+   .replace(/\b(dopodomani|domani|oggi|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|alle|il|per|sul|nel|calendario)\b/ig,' ')
+   .replace(/\s+/g,' ').trim();
+ title=title.replace(/^(?:ho\s+|devo\s+|inserisci\s+|aggiungi\s+|segnami\s+)+/i,'').trim();
  if(!title)title='Nuovo impegno';
- const normalizeText=s=>String(s||'').toLocaleLowerCase('it-IT').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,' ').trim();
  const normalized=normalizeText(raw);
- // Un calendario nominato dall'utente ha sempre la precedenza sulle categorie automatiche.
  const explicitCalendar=calendars.find(c=>{
    const name=normalizeText(c.name);
-   return name && (normalized.includes('calendario '+name) || (' '+normalized+' ').includes(' '+name+' '));
+   return name&&(normalized.includes('calendario '+name)||(' '+normalized+' ').includes(' '+name+' '));
  });
  const workWords=/\b(riunione|lavoro|turno|ufficio|collega|colleghi|cliente|clienti|capo|azienda|servizio|consegna|fornitore)\b/i;
  const familyWords=/\b(famiglia|familiare|moglie|marito|figlio|figlia|figli|genitori|mamma|papa|scuola|compleanno)\b/i;
  const personalWords=/\b(personale|medico|dentista|palestra|allenamento|spesa|banca)\b/i;
  let cal=explicitCalendar;
- if(!cal){
-   if(workWords.test(normalized)) cal=calendars.find(c=>c.id==='work'||normalizeText(c.name)==='lavoro');
-   else if(familyWords.test(normalized)) cal=calendars.find(c=>c.id==='family'||normalizeText(c.name)==='famiglia');
-   else if(personalWords.test(normalized)) cal=calendars.find(c=>c.id==='personal'||normalizeText(c.name)==='personale');
- }
- // La scelta esplicita nel selettore di Genia ha priorità sulle classificazioni automatiche.
- cal=calendars.find(c=>c.id===geniaCalendarId)||calendars[0];
- events.push({id:String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
+ if(!cal&&workWords.test(normalized))cal=calendars.find(c=>c.id==='work'||normalizeText(c.name)==='lavoro');
+ if(!cal&&!explicitCalendar&&familyWords.test(normalized))cal=calendars.find(c=>c.id==='family'||normalizeText(c.name)==='famiglia');
+ if(!cal&&!explicitCalendar&&personalWords.test(normalized))cal=calendars.find(c=>c.id==='personal'||normalizeText(c.name)==='personale');
+ if(!cal)cal=calendars.find(c=>c.id===geniaCalendarId)||calendars[0];
+ if(!cal){$('geniaNotice').textContent='Prima crea almeno un calendario.';return;}
+ const dateText=date.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+ const timeNote=tm?'':' (orario non indicato: proposta 09:00)';
+ const summary='Genia ha capito questo appuntamento:\n\nTitolo: '+title+'\nData: '+dateText+'\nOra: '+time+(timeNote?'\n'+timeNote:'')+'\nCalendario: '+cal.name+'\n\nVuoi salvarlo?';
+ if(!window.confirm(summary)){ $('geniaNotice').textContent='Nessun evento salvato. Puoi correggere la frase e riprovare.';return; }
+ events.push({id:(crypto.randomUUID&&crypto.randomUUID())||String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
  selected=iso(date);view=new Date(date.getFullYear(),date.getMonth(),1);save();$('geniaCommand').value='';
- $('geniaNotice').textContent='Aggiunto “'+title+'” per '+date.toLocaleDateString('it-IT')+' alle '+time+' nel calendario '+cal.name+'. Controlla i dettagli.';
+ $('geniaNotice').textContent='Appuntamento salvato nel calendario '+cal.name+'.';
  render();
 }
 $('geniaSend').onclick=geniaParse;$('geniaCommand').addEventListener('keydown',e=>{if(e.key==='Enter')geniaParse()});
