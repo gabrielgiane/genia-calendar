@@ -149,6 +149,11 @@ async function syncLocalToCloud(){
  try{
   const {data:remoteCals,error:calErr}=await supabaseClient.from('calendars').select('*');
   if(calErr)throw calErr;
+  for(const remote of (remoteCals||[])){
+   if(!calendars.some(c=>c.name.toLocaleLowerCase('it-IT')===remote.name.toLocaleLowerCase('it-IT'))){
+    calendars.push({id:remote.id,cloudId:remote.id,name:remote.name,color:remote.color||colors[calendars.length%colors.length]});
+   }
+  }
   const remoteByName=new Map((remoteCals||[]).map(c=>[c.name.toLocaleLowerCase('it-IT'),c]));
   for(const c of calendars){
    let remote=remoteByName.get(c.name.toLocaleLowerCase('it-IT'));
@@ -198,6 +203,7 @@ async function bootstrapCloud(user){
 }
 function showApp(user){
  currentUser=user||null;
+ if(currentUser)bootstrapCloud(currentUser);
  $('authScreen').hidden=true;
  $('appMain').hidden=false;
  $('accountStatus').textContent=user?user.email:'Modalità offline';
