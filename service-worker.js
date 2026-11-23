@@ -1,4 +1,4 @@
-const CACHE_NAME = "genia-calendar-v12";
+const CACHE_NAME = "genia-calendar-v13";
 const APP_SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon.svg"];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME).then(cache => cache.addAll(APP_SHELL)));
