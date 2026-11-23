@@ -175,6 +175,7 @@ function geniaParse(){
    .replace(/\b\d{1,2}[\/.-]\d{1,2}(?:[\/.-]\d{4})?\b/,' ')
    .replace(/\b(?:alle\s*)?([01]?\d|2[0-3])[:.]([0-5]\d)\b/ig,' ')
    .replace(/\balle\s*([01]?\d|2[0-3])\b/ig,' ')
+   .replace(/\b(?:zero|una|uno|un|due|tre|quattro|cinque|sei|sette|otto|nove|dieci|undici|dodici|tredici|quattordici|quindici|sedici|diciassette|diciotto|diciannove|venti|ventuno|ventidue|ventitre|ventiquattro)\b/ig,' ')
    .replace(/\b(dopodomani|domani|oggi|lunedì|lunedi|martedì|martedi|mercoledì|mercoledi|giovedì|giovedi|venerdì|venerdi|sabato|domenica|alle|il|per|sul|nel|calendario)\b/ig,' ')
    .replace(/\s+/g,' ').trim();
  title=title.replace(/^(?:ho\s+|devo\s+|inserisci\s+|aggiungi\s+|segnami\s+)+/i,'').trim();
