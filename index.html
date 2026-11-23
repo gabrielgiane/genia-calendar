@@ -132,6 +132,70 @@ const SUPABASE_KEY='sb_publishable_KWs1lgQsVTlfqXEEYu9xuA_evK10WO7';
 const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser=null;
 function authMessage(message){$('authError').textContent=message||''}
+let cloudSyncBusy=false, cloudUserId=null;
+function localDateTime(date,time){
+ const parts=String(date||'').split('-').map(Number);
+ const hm=String(time||'00:00').split(':').map(Number);
+ return new Date(parts[0],(parts[1]||1)-1,parts[2]||1,hm[0]||0,hm[1]||0).toISOString();
+}
+function cloudLocalDate(isoValue){
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Rome',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(isoValue));
+ const v=Object.fromEntries(parts.map(p=>[p.type,p.value]));
+ return {date:v.year+'-'+v.month+'-'+v.day,time:v.hour+':'+v.minute};
+}
+async function syncLocalToCloud(){
+ if(!currentUser || cloudSyncBusy) return;
+ cloudSyncBusy=true;
+ try{
+  const {data:remoteCals,error:calErr}=await supabaseClient.from('calendars').select('*');
+  if(calErr)throw calErr;
+  const remoteByName=new Map((remoteCals||[]).map(c=>[c.name.toLocaleLowerCase('it-IT'),c]));
+  for(const c of calendars){
+   let remote=remoteByName.get(c.name.toLocaleLowerCase('it-IT'));
+   if(!remote){
+    const {data,error}=await supabaseClient.from('calendars').insert({name:c.name,owner_id:currentUser.id,color:c.color,is_personal:c.id==='personal',description:null}).select().single();
+    if(error)throw error; remote=data; remoteByName.set(c.name.toLocaleLowerCase('it-IT'),remote);
+   }
+   c.cloudId=remote.id;
+  }
+  for(const e of events){
+   const c=calendars.find(x=>x.id===e.calendarId);
+   if(!c?.cloudId)continue;
+   const row={calendar_id:c.cloudId,created_by:currentUser.id,title:e.title,description:e.notes||null,starts_at:localDateTime(e.date,e.time),timezone:'Europe/Rome',all_day:false};
+   let result;
+   if(e.cloudId) result=await supabaseClient.from('events').upsert({...row,id:e.cloudId}).select().single();
+   else result=await supabaseClient.from('events').insert(row).select().single();
+   if(result.error)throw result.error;
+   e.cloudId=result.data.id;
+  }
+  localStorage.setItem('genia_calendars',JSON.stringify(calendars));
+  localStorage.setItem('genia_events',JSON.stringify(events));
+  const {data:allEvents,error:eventErr}=await supabaseClient.from('events').select('*').order('starts_at');
+  if(eventErr)throw eventErr;
+  const allowedIds=new Set((remoteCals||[]).map(c=>c.id)); calendars.forEach(c=>allowedIds.add(c.cloudId));
+  for(const ev of (allEvents||[]).filter(x=>allowedIds.has(x.calendar_id))){
+   const c=calendars.find(x=>x.cloudId===ev.calendar_id);
+   if(!c)continue;
+   const dt=cloudLocalDate(ev.starts_at);
+   const existing=events.find(x=>x.cloudId===ev.id);
+   const item={id:ev.id,cloudId:ev.id,title:ev.title,date:dt.date,time:dt.time,calendarId:c.id,notes:ev.description||''};
+   if(existing)Object.assign(existing,item);else events.push(item);
+  }
+  localStorage.setItem('genia_calendars',JSON.stringify(calendars));
+  localStorage.setItem('genia_events',JSON.stringify(events));
+  render();
+  $('accountStatus').textContent=currentUser.email+' · sincronizzato';
+ }catch(err){
+  $('accountStatus').textContent=currentUser.email+' · errore sincronizzazione';
+  console.error('Genia cloud sync:',err);
+ }finally{cloudSyncBusy=false}
+}
+async function bootstrapCloud(user){
+ if(!user || cloudUserId===user.id)return;
+ cloudUserId=user.id;
+ await supabaseClient.from('profiles').upsert({id:user.id,display_name:user.email},{onConflict:'id'});
+ await syncLocalToCloud();
+}
 function showApp(user){
  currentUser=user||null;
  $('authScreen').hidden=true;
@@ -179,7 +243,11 @@ supabaseClient.auth.onAuthStateChange((_event,session)=>{
 
 
 function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
-function save(){localStorage.setItem('genia_calendars',JSON.stringify(calendars));localStorage.setItem('genia_events',JSON.stringify(events))}
+function save(){
+ localStorage.setItem('genia_calendars',JSON.stringify(calendars));
+ localStorage.setItem('genia_events',JSON.stringify(events));
+ if(currentUser)syncLocalToCloud();
+}
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function renderCalendars(){
  $('calendarList').innerHTML=calendars.map(c=>`<label class="cal"><input type="checkbox" data-cal="${c.id}" ${visible.has(c.id)?'checked':''}><span class="dot" style="background:${c.color}"></span><span>${esc(c.name)}</span></label>`).join('');
@@ -203,7 +271,7 @@ function renderEventList(){
  const list=events.filter(e=>e.date===selected&&visible.has(e.calendarId)).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
  $('eventList').innerHTML=list.length?list.map(e=>{let c=calendars.find(x=>x.id===e.calendarId);return `<div class="eventrow"><div><b>${esc(e.time||'')} ${esc(e.title)}</b><span class="muted">${esc(c?.name||'')} ${e.notes?'· '+esc(e.notes):''}</span></div><button class="ghost" data-edit="${e.id}" title="Modifica">✎</button><button class="ghost" data-delete="${e.id}" title="Elimina">✕</button></div>`}).join(''):'<div class="empty">Nessun impegno per questo giorno.</div>';
  document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>editEvent(b.dataset.edit)));
- document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Eliminare questo appuntamento?')){events=events.filter(e=>e.id!==b.dataset.delete);save();render()}}));
+ document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Eliminare questo appuntamento?')){const removed=events.find(e=>e.id===b.dataset.delete);events=events.filter(e=>e.id!==b.dataset.delete);if(currentUser&&removed?.cloudId)supabaseClient.from('events').delete().eq('id',removed.cloudId);save();render()}}));
 }
 let editingEventId=null;
 function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventNotes').value='';$('eventName').focus();}
