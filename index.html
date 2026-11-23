@@ -69,6 +69,15 @@ label{color:#cbd5e1}.genia{background:linear-gradient(145deg,#172b4b,#111c30);bo
   <h2>I tuoi calendari</h2>
   <div class="cal-list" id="calendarList"></div>
   <button class="secondary addcal" id="addCalendar">＋ Aggiungi calendario</button>
+  <div style="height:14px"></div>
+  <h2>Backup dei dati</h2>
+  <div class="muted">Salva una copia di calendari e appuntamenti oppure ripristinala da un file.</div>
+  <div style="display:grid;gap:8px;margin-top:10px">
+    <button class="secondary" id="exportBackup">↓ Esporta backup</button>
+    <button class="secondary" id="importBackupButton">↑ Ripristina backup</button>
+    <input id="importBackupFile" type="file" accept=".json,application/json" style="display:none">
+  </div>
+  <div class="notice" id="backupNotice">Consigliato: esporta periodicamente una copia e conservala sul telefono o su Drive.</div>
   <div class="notice" id="googleStatus">Google Calendar: collegamento non ancora disponibile. Nessun evento verrà importato automaticamente.</div>
   <div class="notice">Versione 1.1 · I dati restano salvati in questo browser su questo dispositivo.</div>
 </aside>
@@ -143,6 +152,36 @@ $('form').onsubmit=e=>{e.preventDefault();const item={id:editingEventId||((crypt
 $('addCalendar').onclick=()=>{let name=prompt('Nome del nuovo calendario:');if(!name||!name.trim())return;let id='cal-'+Date.now();calendars.push({id,name:name.trim(),color:colors[calendars.length%colors.length]});visible.add(id);save();render()};
 // L'importazione Google reale sarà aggiunta solo con OAuth e accesso autorizzato.
 
+
+
+function exportBackup(){
+ const payload={app:'Genia Calendar',version:1,exportedAt:new Date().toISOString(),calendars,events};
+ const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='genia-backup-'+iso(new Date())+'.json';
+ document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);
+ $('backupNotice').textContent='Backup esportato. Conserva il file in un posto sicuro.';
+}
+$('exportBackup').addEventListener('click',exportBackup);
+$('importBackupButton').addEventListener('click',()=>$('importBackupFile').click());
+$('importBackupFile').addEventListener('change',async e=>{
+ const file=e.target.files&&e.target.files[0];if(!file)return;
+ try{
+   const data=JSON.parse(await file.text());
+   if(!data||data.app!=='Genia Calendar'||!Array.isArray(data.calendars)||!Array.isArray(data.events))throw new Error('Formato backup non riconosciuto');
+   if(!data.calendars.length||data.calendars.some(x=>!x||typeof x.id!=='string'||typeof x.name!=='string'||!x.id.trim()||!x.name.trim()))throw new Error('Elenco calendari non valido');
+   const ids=new Set(data.calendars.map(x=>x.id));
+   if(ids.size!==data.calendars.length)throw new Error('Ci sono calendari duplicati nel backup');
+   if(data.events.some(x=>!x||typeof x.id!=='string'||typeof x.title!=='string'||typeof x.date!=='string'||!ids.has(x.calendarId)))throw new Error('Alcuni appuntamenti non sono validi o fanno riferimento a calendari mancanti');
+   if(!confirm('Il ripristino sostituirà i calendari e gli appuntamenti presenti su questo dispositivo. Prima verrà scaricata una copia dei dati attuali. Vuoi continuare?'))return;
+   exportBackup();
+   calendars=data.calendars;events=data.events;visible=new Set(calendars.map(x=>x.id));
+   save();selected=iso(new Date());view=new Date();view.setDate(1);
+   render();$('eventDate').value=selected;
+   $('backupNotice').textContent='Backup ripristinato correttamente.';
+ }catch(err){$('backupNotice').textContent='Impossibile ripristinare: '+err.message;}
+ finally{e.target.value='';}
+});
 
 function geniaParse(){
  const raw=$('geniaCommand').value.trim();
