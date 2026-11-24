@@ -30,6 +30,9 @@ input,select,textarea{font:inherit;width:100%;padding:10px 11px;border:1px solid
 .auth-card{width:min(420px,100%);max-height:calc(100dvh - 36px);overflow-y:auto;margin:auto;background:#17243c;border:1px solid #354b6d;border-radius:20px;padding:24px;box-shadow:0 24px 80px #0009}
 @media(max-height:700px){.auth-screen{place-items:start center;align-content:start;padding-top:12px;padding-bottom:12px}.auth-card{max-height:none;margin:0 auto}}
 .auth-card h2{font-size:22px;margin:0 0 5px}.auth-card p{font-size:13px;color:#aab8cf;margin:0 0 15px}
+.signup-notice{display:grid;gap:5px;margin:14px 0 2px;padding:11px 12px;border:1px solid #49658e;border-radius:11px;background:#203653;color:#dce8f8;font-size:12px;line-height:1.45}
+.signup-notice strong{color:#fff;font-size:12px}
+.signup-notice span{color:#c3d2e6}
 .auth-card label{margin-top:12px}.password-wrap{display:flex;align-items:stretch;gap:8px}.password-wrap input{flex:1;min-width:0}.password-toggle{flex:none;min-width:48px;padding:9px 13px;background:#243a5c;border:1px solid #49658e;color:#fff;font-size:19px;line-height:1}.password-toggle:focus-visible{outline:2px solid #8db4ff;outline-offset:2px}.auth-actions{display:grid;gap:9px;margin-top:16px}.auth-error{color:#ff9b9b;font-size:12px;min-height:18px;margin-top:10px}
 /* Correzione robusta del login su smartphone */
 .auth-screen{
@@ -269,6 +272,10 @@ main#appMain{min-width:0}
       <input id="authPassword" type="password" autocomplete="current-password" placeholder="Almeno 6 caratteri">
       <button class="password-toggle" id="togglePassword" type="button" aria-label="Mostra password" aria-pressed="false">Mostra</button>
     </div>
+    <div class="signup-notice" id="signupNotice">
+      <strong>Conferma dell’indirizzo email</strong>
+      <span>Dopo la registrazione riceverai un messaggio con mittente <b>Supabase Auth</b>, il servizio che Genia utilizza per gestire gli accessi. Apri il link nell’email per confermare il tuo indirizzo e attivare l’account Genia. Se non la trovi, controlla anche Spam o Posta indesiderata.</span>
+    </div>
     <div class="auth-actions">
       <button id="loginBtn">Accedi</button>
       <button class="secondary" id="signupBtn">Crea un account</button>
@@ -426,7 +433,7 @@ async function handleAuth(mode){
    : await supabaseClient.auth.signInWithPassword({email,password});
   if(result.error)throw result.error;
   if(mode==='signup'&&!result.data.session){
-   authMessage('Account creato. Controlla la tua email e conferma la registrazione, poi accedi.');
+   authMessage('Account creato. Cerca nella posta un messaggio con mittente “Supabase Auth”, aprilo e conferma l’indirizzo per attivare Genia. Controlla anche Spam o Posta indesiderata.');
    return;
   }
   if(result.data.user){
