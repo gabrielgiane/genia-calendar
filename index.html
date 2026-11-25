@@ -429,7 +429,7 @@ async function handleAuth(mode){
  $('loginBtn').disabled=$('signupBtn').disabled=true;
  try{
   const result=mode==='signup'
-   ? await supabaseClient.auth.signUp({email,password})
+   ? await supabaseClient.auth.signUp({email,password,options:{emailRedirectTo:'https://gabrielgiane.github.io/genia-calendar/'}})
    : await supabaseClient.auth.signInWithPassword({email,password});
   if(result.error)throw result.error;
   if(mode==='signup'&&!result.data.session){
