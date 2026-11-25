@@ -255,6 +255,9 @@ main#appMain{min-width:0}
   .auth-card { margin:8px auto !important; }
 }
 
+/* FIX: l'attributo hidden deve prevalere sulle regole responsive del login. */
+.auth-screen[hidden] { display: none !important; }
+#appMain[hidden] { display: none !important; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
