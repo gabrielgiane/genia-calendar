@@ -330,14 +330,23 @@ main#appMain{min-width:0}
 
 const colors=['#5276c7','#2f8b68','#a16bc1','#d28a43','#d36d82','#4d9ca5'];
 const today=new Date(); let view=new Date(today.getFullYear(),today.getMonth(),1); let selected=iso(today);
-let calendars=JSON.parse(localStorage.getItem('genia_calendars')||'null')||[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
-let events=JSON.parse(localStorage.getItem('genia_events')||'[]');
+function readLocal(key,fallback){
+ try{const raw=localStorage.getItem(key);return raw===null?fallback:JSON.parse(raw)}
+ catch(err){console.warn('Genia: archivio locale non leggibile',key,err);return fallback}
+}
+let calendars=readLocal('genia_calendars',null)||[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
+let events=readLocal('genia_events',[]);
+if(!Array.isArray(calendars)||!calendars.length)calendars=[{id:'personal',name:'Personale',color:colors[0]},{id:'work',name:'Lavoro',color:colors[1]},{id:'family',name:'Famiglia',color:colors[2]}];
+if(!Array.isArray(events))events=[];
 let visible=new Set(calendars.map(c=>c.id));
 const $=id=>document.getElementById(id);
+// Il pulsante offline viene collegato subito, prima di inizializzare i servizi online.
 const SUPABASE_URL='https://imhuiwzyrucesxtdfpdj.supabase.co';
 const SUPABASE_KEY='sb_publishable_KWs1lgQsVTlfqXEEYu9xuA_evK10WO7';
-const supabaseAvailable=!!(window.supabase&&typeof window.supabase.createClient==='function');
-const supabaseClient=supabaseAvailable?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
+let supabaseClient=null;
+try{if(window.supabase&&typeof window.supabase.createClient==='function')supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY)}
+catch(err){console.warn('Genia: accesso cloud non disponibile',err)}
+const supabaseAvailable=!!supabaseClient;
 let currentUser=null;
 function authMessage(message){$('authError').textContent=message||''}
 let cloudSyncBusy=false, cloudSyncPending=false, cloudUserId=null;
@@ -421,6 +430,7 @@ function showApp(user){
  $('appMain').hidden=false;
  $('accountStatus').textContent=user?user.email:'Modalità offline';
  $('logoutBtn').hidden=!user;
+ try{render();$('eventDate').value=selected}catch(err){console.error('Genia: apertura calendario',err)}
 }
 async function handleAuth(mode){
  authMessage('');
@@ -477,8 +487,10 @@ if(supabaseClient){
 
 function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
 function save(){
- localStorage.setItem('genia_calendars',JSON.stringify(calendars));
- localStorage.setItem('genia_events',JSON.stringify(events));
+ try{
+  localStorage.setItem('genia_calendars',JSON.stringify(calendars));
+  localStorage.setItem('genia_events',JSON.stringify(events));
+ }catch(err){console.error('Genia: salvataggio locale non disponibile',err);alert('Il browser non permette di salvare i dati su questo dispositivo. Prova ad aprire Genia con Chrome.')}
  if(currentUser)syncLocalToCloud();
 }
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
