@@ -310,6 +310,7 @@ main#appMain{min-width:0}
   </div>
   <div class="weekdays"><div>LUN</div><div>MAR</div><div>MER</div><div>GIO</div><div>VEN</div><div>SAB</div><div>DOM</div></div>
   <div class="days" id="days"></div>
+  <div class="subpanel" id="dailyLoadPanel" style="margin-top:16px"><h3>Carico della giornata</h3><div id="dailyLoadContent" class="empty">Seleziona un giorno per calcolare il carico.</div></div>
   <div class="below">
     <div class="subpanel"><h3 id="selectedTitle">Impegni del giorno</h3><div id="eventList"></div></div>
     <div class="subpanel" id="eventForm">
@@ -319,6 +320,7 @@ main#appMain{min-width:0}
         <div class="formgrid">
           <div><label for="eventDate">Data</label><input id="eventDate" type="date" required></div>
           <div><label for="eventTime">Ora</label><input id="eventTime" type="time" value="09:00"></div>
+          <div><label for="eventDuration">Durata (minuti)</label><input id="eventDuration" type="number" min="5" max="1440" step="5" value="60"></div>
           <div class="wide"><label for="eventCalendar">Calendario</label><select id="eventCalendar"></select></div>
           <div class="wide"><label for="eventNotes">Note (facoltative)</label><input id="eventNotes" placeholder="Dettagli aggiuntivi"></div>
         </div>
@@ -514,19 +516,32 @@ function render(){
  document.querySelectorAll('[data-date]').forEach(el=>el.addEventListener('click',()=>{selected=el.dataset.date;render();$('eventDate').value=selected}));
  renderEventList();
 }
+function eventDuration(e){const n=Number(e.durationMinutes);return Number.isFinite(n)&&n>0?Math.min(1440,n):60}
+function renderDailyLoad(){
+ const list=events.filter(e=>e.date===selected&&visible.has(e.calendarId));
+ const total=list.reduce((sum,e)=>sum+eventDuration(e),0);
+ const score=Math.min(100,Math.round(total/480*100));
+ const level=score<=30?'Leggero':score<=60?'Moderato':score<=80?'Alto':'Molto alto';
+ const color=score<=30?'#55b995':score<=60?'#e4c45a':score<=80?'#ed9b52':'#e46b75';
+ const mins=t=>{const p=String(t||'00:00').split(':').map(Number);return (p[0]||0)*60+(p[1]||0)};
+ const sorted=list.slice().sort((a,b)=>mins(a.time)-mins(b.time));let overlap=false;
+ for(let i=1;i<sorted.length;i++){if(mins(sorted[i].time)<mins(sorted[i-1].time)+eventDuration(sorted[i-1])){overlap=true;break}}
+ $('dailyLoadContent').innerHTML=list.length?`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><div><strong style="font-size:23px">${score}/100</strong><div style="font-weight:700;color:${color}">${level}</div></div><div style="text-align:right"><strong>${(total/60).toLocaleString('it-IT',{maximumFractionDigits:1})} ore</strong><div class="muted">${list.length} impegni · ${total} minuti</div></div></div><div style="height:10px;background:#263650;border-radius:99px;overflow:hidden;margin:12px 0"><div style="height:100%;width:${score}%;background:${color};border-radius:99px"></div></div><div class="muted">Stima indicativa basata sulla durata totale degli impegni.${overlap?'<br><strong style="color:#ed9b52">Attenzione: ci sono possibili sovrapposizioni.</strong>':''}</div>`:'<div class="empty">Nessun impegno: carico leggero (0/100).</div>';
+}
 function renderEventList(){
  const d=new Date(selected+'T12:00:00');$('selectedTitle').textContent='Impegni · '+d.toLocaleDateString('it-IT',{day:'numeric',month:'long'});
  const list=events.filter(e=>e.date===selected&&visible.has(e.calendarId)).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
- $('eventList').innerHTML=list.length?list.map(e=>{let c=calendars.find(x=>x.id===e.calendarId);return `<div class="eventrow"><div><b>${esc(e.time||'')} ${esc(e.title)}</b><span class="muted">${esc(c?.name||'')} ${e.notes?'· '+esc(e.notes):''}</span></div><button class="ghost" data-edit="${e.id}" title="Modifica">✎</button><button class="ghost" data-delete="${e.id}" title="Elimina">✕</button></div>`}).join(''):'<div class="empty">Nessun impegno per questo giorno.</div>';
+ $('eventList').innerHTML=list.length?list.map(e=>{let c=calendars.find(x=>x.id===e.calendarId);return `<div class="eventrow"><div><b>${esc(e.time||'')} ${esc(e.title)}</b><span class="muted">${eventDuration(e)} min · ${esc(c?.name||'')} ${e.notes?'· '+esc(e.notes):''}</span></div><button class="ghost" data-edit="${e.id}" title="Modifica">✎</button><button class="ghost" data-delete="${e.id}" title="Elimina">✕</button></div>`}).join(''):'<div class="empty">Nessun impegno per questo giorno.</div>';
+ renderDailyLoad();
  document.querySelectorAll('[data-edit]').forEach(b=>b.addEventListener('click',()=>editEvent(b.dataset.edit)));
  document.querySelectorAll('[data-delete]').forEach(b=>b.addEventListener('click',()=>{if(confirm('Eliminare questo appuntamento?')){const removed=events.find(e=>e.id===b.dataset.delete);events=events.filter(e=>e.id!==b.dataset.delete);if(currentUser&&removed?.cloudId)supabaseClient.from('events').delete().eq('id',removed.cloudId);save();render()}}));
 }
 let editingEventId=null;
-function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventNotes').value='';$('eventName').focus();}
-function editEvent(id){const ev=events.find(x=>x.id===id);if(!ev)return;editingEventId=id;$('formTitle').textContent='Modifica impegno';$('eventName').value=ev.title;$('eventDate').value=ev.date;$('eventTime').value=ev.time||'';$('eventCalendar').value=ev.calendarId;$('eventNotes').value=ev.notes||'';document.getElementById('eventForm').scrollIntoView({behavior:'smooth',block:'center'});}
+function openForm(){editingEventId=null;$('formTitle').textContent='Aggiungi un impegno';$('eventName').value='';$('eventDate').value=selected;$('eventTime').value='09:00';$('eventDuration').value='60';$('eventNotes').value='';$('eventName').focus();}
+function editEvent(id){const ev=events.find(x=>x.id===id);if(!ev)return;editingEventId=id;$('formTitle').textContent='Modifica impegno';$('eventName').value=ev.title;$('eventDate').value=ev.date;$('eventTime').value=ev.time||'';$('eventDuration').value=String(eventDuration(ev));$('eventCalendar').value=ev.calendarId;$('eventNotes').value=ev.notes||'';document.getElementById('eventForm').scrollIntoView({behavior:'smooth',block:'center'});}
 $('newEvent').onclick=openForm;$('prev').onclick=()=>{view.setMonth(view.getMonth()-1);render()};$('next').onclick=()=>{view.setMonth(view.getMonth()+1);render()};
 $('cancelForm').onclick=()=>{$('form').reset();$('eventTime').value='09:00'};
-$('form').onsubmit=e=>{e.preventDefault();const item={id:editingEventId||((crypto.randomUUID&&crypto.randomUUID())||String(Date.now())),title:$('eventName').value.trim(),date:$('eventDate').value,time:$('eventTime').value,calendarId:$('eventCalendar').value,notes:$('eventNotes').value.trim()};if(editingEventId){const i=events.findIndex(x=>x.id===editingEventId);if(i>=0)events[i]=item;}else events.push(item);editingEventId=null;selected=$('eventDate').value;view=new Date(selected+'T12:00:00');view.setDate(1);save();$('form').reset();$('eventTime').value='09:00';$('formTitle').textContent='Aggiungi un impegno';render()};
+$('form').onsubmit=e=>{e.preventDefault();const duration=Math.max(5,Math.min(1440,Number($('eventDuration').value)||60));const item={id:editingEventId||((crypto.randomUUID&&crypto.randomUUID())||String(Date.now())),title:$('eventName').value.trim(),date:$('eventDate').value,time:$('eventTime').value,durationMinutes:duration,calendarId:$('eventCalendar').value,notes:$('eventNotes').value.trim()};if(editingEventId){const i=events.findIndex(x=>x.id===editingEventId);if(i>=0)events[i]=item;}else events.push(item);editingEventId=null;selected=$('eventDate').value;view=new Date(selected+'T12:00:00');view.setDate(1);save();$('form').reset();$('eventTime').value='09:00';$('eventDuration').value='60';$('formTitle').textContent='Aggiungi un impegno';render()};
 $('addCalendar').onclick=()=>{let name=prompt('Nome del nuovo calendario:');if(!name||!name.trim())return;let id='cal-'+Date.now();calendars.push({id,name:name.trim(),color:colors[calendars.length%colors.length]});visible.add(id);save();render()};
 
 function geniaParse(){
@@ -551,7 +566,7 @@ function geniaParse(){
    .replace(/\b([01]?\d|2[0-3])(?:[:.]([0-5]\d))?\b/,'').trim();
  if(!title)title='Nuovo impegno';
  const cal=calendars.find(c=>low.includes(c.name.toLocaleLowerCase('it-IT')))||calendars[0];
- events.push({id:String(Date.now()),title,date:iso(date),time,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
+ events.push({id:String(Date.now()),title,date:iso(date),time,durationMinutes:60,calendarId:cal.id,notes:'Inserito con Genia (modalità locale)'});
  selected=iso(date);view=new Date(date.getFullYear(),date.getMonth(),1);save();$('geniaCommand').value='';
  $('geniaNotice').textContent='Aggiunto “'+title+'” per '+date.toLocaleDateString('it-IT')+' alle '+time+' nel calendario '+cal.name+'. Controlla i dettagli.';
  render();
