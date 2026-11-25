@@ -336,7 +336,8 @@ let visible=new Set(calendars.map(c=>c.id));
 const $=id=>document.getElementById(id);
 const SUPABASE_URL='https://imhuiwzyrucesxtdfpdj.supabase.co';
 const SUPABASE_KEY='sb_publishable_KWs1lgQsVTlfqXEEYu9xuA_evK10WO7';
-const supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const supabaseAvailable=!!(window.supabase&&typeof window.supabase.createClient==='function');
+const supabaseClient=supabaseAvailable?window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY):null;
 let currentUser=null;
 function authMessage(message){$('authError').textContent=message||''}
 let cloudSyncBusy=false, cloudSyncPending=false, cloudUserId=null;
@@ -423,6 +424,7 @@ function showApp(user){
 }
 async function handleAuth(mode){
  authMessage('');
+ if(!supabaseClient){authMessage('Il servizio di accesso non è disponibile in questo momento. Puoi comunque usare Genia con “Continua in modalità offline”.');return;}
  const email=$('authEmail').value.trim(), password=$('authPassword').value;
  if(!email||!password){authMessage('Inserisci email e password.');return}
  if(password.length<6){authMessage('La password deve contenere almeno 6 caratteri.');return}
@@ -455,17 +457,22 @@ $('togglePassword').addEventListener('click',()=>{
 $('signupBtn').addEventListener('click',()=>handleAuth('signup'));
 $('offlineBtn').addEventListener('click',()=>showApp(null));
 $('logoutBtn').addEventListener('click',async()=>{
- await supabaseClient.auth.signOut();
+ if(supabaseClient) await supabaseClient.auth.signOut();
  currentUser=null;cloudUserId=null;cloudSyncPending=false;$('appMain').hidden=true;$('authScreen').hidden=false;
  $('accountStatus').textContent='Accesso non effettuato';$('logoutBtn').hidden=true;
 });
-supabaseClient.auth.getSession().then(({data})=>{
- if(data.session)showApp(data.session.user);
- else {$('appMain').hidden=true;$('authScreen').hidden=false}
-});
-supabaseClient.auth.onAuthStateChange((_event,session)=>{
- if(session)showApp(session.user);
-});
+if(supabaseClient){
+ supabaseClient.auth.getSession().then(({data})=>{
+  if(data.session)showApp(data.session.user);
+  else {$('appMain').hidden=true;$('authScreen').hidden=false}
+ }).catch(err=>{console.error('Genia sessione:',err);$('appMain').hidden=true;$('authScreen').hidden=false});
+ supabaseClient.auth.onAuthStateChange((_event,session)=>{
+  if(session)showApp(session.user);
+ });
+}else{
+ $('appMain').hidden=true;
+ $('authScreen').hidden=false;
+}
 
 
 function iso(d){return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-')}
