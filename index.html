@@ -293,6 +293,8 @@ main#appMain{min-width:0}
   <h2>I tuoi calendari</h2>
   <div class="cal-list" id="calendarList"></div>
   <button class="secondary addcal" id="addCalendar">＋ Aggiungi calendario</button>
+  <button class="secondary addcal" id="googleConnectBtn" style="margin-top:9px">Collega Google Calendar</button>
+  <div class="notice" id="googleCalendarNotice">Collega il tuo account Google per preparare la sincronizzazione del calendario.</div>
   <div style="height:18px"></div>
 
   <div class="notice">Versione 1.2 · Accesso account disponibile; sincronizzazione calendari in fase di completamento.</div>
@@ -471,11 +473,39 @@ $('togglePassword').addEventListener('click',()=>{
  $('loginBtn').addEventListener('click',()=>handleAuth('login'));
 $('signupBtn').addEventListener('click',()=>handleAuth('signup'));
 $('offlineBtn').addEventListener('click',()=>showApp(null));
+$('googleConnectBtn').addEventListener('click',async()=>{
+ if(!currentUser || !supabaseClient){alert('Accedi prima a Genia con il tuo account.');return;}
+ const btn=$('googleConnectBtn');
+ btn.disabled=true;btn.textContent='Connessione in corso…';
+ try{
+  const {data:{session},error:sessionError}=await supabaseClient.auth.getSession();
+  if(sessionError||!session?.access_token)throw new Error('Sessione Genia non valida. Esci e accedi di nuovo.');
+  const response=await fetch(SUPABASE_URL+'/functions/v1/google-calendar-oauth',{
+   method:'POST',
+   headers:{'Content-Type':'application/json','Authorization':'Bearer '+session.access_token,'apikey':SUPABASE_KEY},
+   body:JSON.stringify({})
+  });
+  const result=await response.json();
+  if(!response.ok||!result.url)throw new Error(result.error||'Non è stato possibile avviare il collegamento Google.');
+  window.location.href=result.url;
+ }catch(err){
+  alert(err.message||'Errore durante il collegamento a Google Calendar.');
+  btn.disabled=false;btn.textContent='Collega Google Calendar';
+ }
+});
 $('logoutBtn').addEventListener('click',async()=>{
  if(supabaseClient) await supabaseClient.auth.signOut();
  currentUser=null;cloudUserId=null;cloudSyncPending=false;$('appMain').hidden=true;$('authScreen').hidden=false;
  $('accountStatus').textContent='Accesso non effettuato';$('logoutBtn').hidden=true;
 });
+const googleOAuthParams=new URLSearchParams(window.location.search);
+if(googleOAuthParams.get('google_calendar')==='connected'){
+ alert('Account Google autorizzato correttamente. La sincronizzazione degli eventi verrà attivata nel passaggio successivo.');
+ history.replaceState({},document.title,window.location.pathname);
+}else if(googleOAuthParams.get('google_calendar')==='error'){
+ alert('Collegamento Google non completato: '+(googleOAuthParams.get('message')||'riprova tra poco'));
+ history.replaceState({},document.title,window.location.pathname);
+}
 if(supabaseClient){
  supabaseClient.auth.getSession().then(({data})=>{
   if(data.session)showApp(data.session.user);
